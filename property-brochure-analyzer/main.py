@@ -40,7 +40,7 @@ async def analyze_property(
     floor_plan: Optional[UploadFile] = File(None)
 ):
     try:
-        model = genai.GenerativeModel("gemini-2.0-flash-lite")
+        model = genai.GenerativeModel("gemini-2.0-flash")
 
         prompt = """
 From these pdfs can you extract the following fields: and give it to me in a JSON format
