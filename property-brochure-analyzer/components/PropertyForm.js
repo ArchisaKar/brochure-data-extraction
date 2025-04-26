@@ -38,7 +38,7 @@ export default function PropertyUploader({ setLoading, setError, onUploadSuccess
     }
     
     try {
-      const response = await fetch('/api/process-property', {
+      const response = await fetch("http://localhost:8000/upload", {
         method: 'POST',
         body: formData,
       });

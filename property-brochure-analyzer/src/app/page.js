@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import Head from 'next/head';
 import PropertyUploader from '../../components/PropertyForm';
+import PropertyInfo from '../../components/PropertyInfo';
 
 export default function Home() {
   const [propertyData, setPropertyData] = useState(null);
@@ -29,21 +30,24 @@ export default function Home() {
             setError={setError}
             onUploadSuccess={handleUploadSuccess}
           />
-          
+
           {loading && (
             <div className="text-center mt-8">
               <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-blue-600"></div>
               <p className="mt-2">Analyzing your documents...</p>
             </div>
           )}
-          
+
           {error && (
             <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mt-4">
               <p>{error}</p>
             </div>
           )}
-          
-          {/* {propertyData && <PropertyData data={propertyData} />} */}
+
+          {/* 🆕 Render PropertyInfo if data is available */}
+          {propertyData && !loading && !error && (
+            <PropertyInfo data={propertyData} />
+          )}
         </div>
       </main>
     </div>
