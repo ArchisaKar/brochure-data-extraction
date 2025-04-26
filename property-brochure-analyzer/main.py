@@ -23,6 +23,38 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+import json
+import re
+
+def safe_json_load(response_text: str):
+    """
+    Cleans and safely loads a JSON string, even if it comes wrapped in ```json blocks or has minor issues.
+    """
+    if not response_text or not response_text.strip():
+        raise ValueError("Empty response from model")
+
+    # 1. Clean ```json ... ``` if exists
+    cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", response_text.strip(), flags=re.IGNORECASE)
+
+    # 2. Try parsing normally
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError:
+        pass  # Fall back to fixing common mistakes
+
+    # 3. Try minor fixes: missing brackets
+    if not cleaned.startswith("{"):
+        cleaned = "{" + cleaned
+    if not cleaned.endswith("}"):
+        cleaned = cleaned + "}"
+
+    # 4. Try parsing again
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Failed to parse JSON even after cleaning: {e}")
+
+
 def to_base64(file: UploadFile):
     return base64.b64encode(file.file.read()).decode('utf-8')
 
@@ -37,7 +69,7 @@ def create_file_part(file: UploadFile):
 @app.post("/upload")
 async def analyze_property(
     brochure: UploadFile = File(...),
-    floor_plan: Optional[UploadFile] = File(None)
+    floor_plan: UploadFile = File(...)
 ):
     try:
         model = genai.GenerativeModel("gemini-2.0-flash")
@@ -53,11 +85,11 @@ city: city where the building/property is located
 location: location in the city where the building/property is located 
 price: price of the property 
 description: summarized description of the property
-bedrooms: the number of bedrooms in the property
-bathroom: the number of bathrooms in the property
-area: the area of the building/property in sqft or whatever unit is there in the files (e.g. 1,000 - 3,200)
+bedrooms: the range of number of bedrooms available in the property
+bathroom: the range of number of bathrooms available in the property, possibly check the floor plan for how many bathrooms/toilets there are. Give me a number or a range.
+area: the area of the building/property in sqft or whatever unit is there in the files (e.g. 1,000 - 3,200 sqft)
 payment_plan: when the customer needs to pay and how much %
-handover: the date when the property will be handed over to the user (e.g. Q1 2026) 
+handover: the date when the property will be handed over to the user (e.g. Q1 2026) or the year. 
 down_payment: the down payment of the property in percentage (e.g. 20%) 
 average_price_per_sqft: can be calculated from price and sqft 
 (from here on these are property amenities, please give the answer as yes or no. If data is not mentioned just say no)
@@ -86,7 +118,7 @@ has_outdoor_gymnasium: check if there are any outdoor gyms/ gymnasiums in the vi
 has_bbq_area: check if there are any barbeque areas in the vicinity of the property
 is_pet_friendly: check if the property is pet friendly
 
-Respond ONLY with a valid JSON object. No extra explanations, no headings, no code blocks.
+Respond ONLY with a valid JSON object. Every value should start with a capital letter. No extra explanations, no headings, no code blocks.
         """
 
         file_parts = [create_file_part(brochure)]
@@ -96,8 +128,7 @@ Respond ONLY with a valid JSON object. No extra explanations, no headings, no co
         result = model.generate_content([prompt] + file_parts)
         response = result.text
 
-        # ✅ NEW PART: Parse the JSON
-        parsed_response = json.loads(response)
+        parsed_response = safe_json_load(response)
 
         return JSONResponse(content=parsed_response, status_code=200)
 

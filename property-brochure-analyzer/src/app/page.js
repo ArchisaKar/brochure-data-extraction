@@ -34,7 +34,7 @@ export default function Home() {
           {loading && (
             <div className="text-center mt-8">
               <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-blue-600"></div>
-              <p className="mt-2">Analyzing your documents...</p>
+              <p className="mt-2 text-black">Analyzing your documents...</p>
             </div>
           )}
 
